@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
-import '../../../../shared/widgets/floating_nav_bar.dart';
 import '../../../../shared/widgets/pill_filter_button.dart';
 import '../../../auth/bloc/auth_bloc.dart';
 import '../../../auth/bloc/auth_state.dart';
@@ -19,7 +18,6 @@ class CapsulesListScreen extends StatefulWidget {
 }
 
 class _CapsulesListScreenState extends State<CapsulesListScreen> {
-  int _currentNavIndex = 0;
   String _currentFilter = 'All';
 
   @override
@@ -37,66 +35,52 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
     return Scaffold(
       extendBody: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        bottom: false,
-        child: BlocListener<CapsulesBloc, CapsulesState>(
-          listener: (context, state) {
-            if (state is CapsuleOperationSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
-            } else if (state is CapsulesError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                ),
-              );
-            }
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              const SizedBox(height: 24),
-              _buildFilters(),
-              const SizedBox(height: 24),
-              Expanded(
-                child: BlocBuilder<AuthBloc, AuthState>(
-                  builder: (context, state) {
-                    if (state is Authenticated) {
-                      return _buildContent(context, state);
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-              ),
-            ],
+      appBar: AppBar(
+        title: const Text('Mis Cápsulas'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.push('/profile'),
           ),
-        ),
+        ],
       ),
-      bottomNavigationBar: FloatingNavBar(
-        currentIndex: _currentNavIndex,
-        onTap: (index) {
-          setState(() {
-            _currentNavIndex = index;
-          });
+      body: BlocListener<CapsulesBloc, CapsulesState>(
+        listener: (context, state) {
+          if (state is CapsuleOperationSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+          } else if (state is CapsulesError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
         },
-        onAddTap: () => context.push('/capsules/create'),
-        onProfileTap: () => context.push('/profile'),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      child: Text(
-        'Mis Cápsulas',
-        style: Theme.of(context).textTheme.displayMedium?.copyWith(
-          fontSize: 32,
-          color: Colors.black,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
+            _buildFilters(),
+            const SizedBox(height: 24),
+            Expanded(
+              child: BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) {
+                  if (state is Authenticated) {
+                    return _buildContent(context, state);
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/capsules/create'),
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }

@@ -10,6 +10,10 @@ import '../../../files/bloc/files_bloc.dart';
 import '../../../files/bloc/files_event.dart';
 import '../../../files/data/repositories/files_repository.dart';
 import '../../../files/ui/widgets/file_list_section.dart';
+import '../../../recipients/bloc/recipients_bloc.dart';
+import '../../../recipients/bloc/recipients_event.dart';
+import '../../../recipients/data/repositories/recipients_repository.dart';
+import '../../../recipients/ui/widgets/recipient_list_section.dart';
 import '../../../../injection_container.dart';
 
 class CapsuleDetailScreen extends StatefulWidget {
@@ -78,12 +82,23 @@ class _CapsuleDetailScreenState extends State<CapsuleDetailScreen> {
     final statusColor = _getStatusColor(capsule.statusString);
     final dateTimeFormat = DateFormat('dd/MM/yyyy HH:mm');
 
-    return BlocProvider(
-      create: (_) => FilesBloc(
-        repository: FilesRepository(
-          dio: InjectionContainer().apiClient.dio,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => FilesBloc(
+            repository: FilesRepository(
+              dio: InjectionContainer().apiClient.dio,
+            ),
+          )..add(LoadFiles(capsuleId: widget.capsuleId)),
         ),
-      )..add(LoadFiles(capsuleId: widget.capsuleId)),
+        BlocProvider(
+          create: (_) => RecipientsBloc(
+            repository: RecipientsRepository(
+              dio: InjectionContainer().apiClient.dio,
+            ),
+          )..add(LoadRecipients(capsuleId: widget.capsuleId)),
+        ),
+      ],
       child: _DetailBody(
         capsule: capsule,
         capsuleId: widget.capsuleId,
@@ -229,10 +244,14 @@ class _DetailBody extends StatelessWidget {
             const SizedBox(height: 24),
             _buildStatsSection(context),
             const SizedBox(height: 24),
+            RecipientListSection(
+              capsuleId: capsuleId,
+              canManage: capsule.status == CapsuleStatus.draft,
+            ),
+            const SizedBox(height: 24),
             FileListSection(
               capsuleId: capsuleId,
-              canUpload: capsule.status == CapsuleStatus.draft ||
-                  capsule.status == CapsuleStatus.locked,
+              canUpload: capsule.status == CapsuleStatus.draft,
             ),
             const SizedBox(height: 32),
             _buildActionButtons(context),

@@ -83,7 +83,7 @@ class CapsulesRepository {
         data: {
           'title': title,
           'description':? description,
-          'unlockDate': unlockDate.toIso8601String(),
+          'unlockDate': unlockDate.toUtc().toIso8601String(),
           'isEncrypted': isEncrypted,
         },
       );
@@ -110,7 +110,7 @@ class CapsulesRepository {
         data: {
           'title':? title,
           'description':? description,
-          'unlockDate':? unlockDate?.toIso8601String(),
+          'unlockDate':? unlockDate?.toUtc().toIso8601String(),
           'status':? status,
         },
       );

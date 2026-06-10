@@ -136,7 +136,6 @@ class CapsulesBloc extends Bloc<CapsulesEvent, CapsulesState> {
     LoadCapsuleDetail event,
     Emitter<CapsulesState> emit,
   ) async {
-    emit(const CapsulesLoading());
     try {
       final capsule = await repository.getCapsuleById(event.capsuleId);
       emit(CapsuleDetailLoaded(capsule: capsule));
@@ -151,7 +150,6 @@ class CapsulesBloc extends Bloc<CapsulesEvent, CapsulesState> {
     UpdateCapsule event,
     Emitter<CapsulesState> emit,
   ) async {
-    emit(const CapsulesLoading());
     try {
       final capsule = await repository.updateCapsule(
         id: event.capsuleId,

@@ -139,14 +139,29 @@ class _TimeCapsuleAppState extends State<TimeCapsuleApp> {
   }
 }
 
-class _EditCapsuleWrapper extends StatelessWidget {
+class _EditCapsuleWrapper extends StatefulWidget {
   final String capsuleId;
 
   const _EditCapsuleWrapper({required this.capsuleId});
 
   @override
+  State<_EditCapsuleWrapper> createState() => _EditCapsuleWrapperState();
+}
+
+class _EditCapsuleWrapperState extends State<_EditCapsuleWrapper> {
+  bool _hasLoaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasLoaded) {
+      _hasLoaded = true;
+      context.read<CapsulesBloc>().add(LoadCapsuleDetail(capsuleId: widget.capsuleId));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    context.read<CapsulesBloc>().add(LoadCapsuleDetail(capsuleId: capsuleId));
     return BlocBuilder<CapsulesBloc, CapsulesState>(
       builder: (context, state) {
         if (state is CapsuleDetailLoaded) {

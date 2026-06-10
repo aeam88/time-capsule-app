@@ -145,10 +145,12 @@ class _CreateEditCapsuleScreenState extends State<CreateEditCapsuleScreen> {
   }
 
   Future<void> _selectDate() async {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final firstDate = _unlockDate.isBefore(tomorrow) ? _unlockDate : tomorrow;
     final date = await showDatePicker(
       context: context,
       initialDate: _unlockDate,
-      firstDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: firstDate,
       lastDate: DateTime.now().add(const Duration(days: 3650)),
     );
     if (date != null) {

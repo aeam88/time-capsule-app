@@ -102,3 +102,12 @@ class UnlockCapsule extends CapsulesEvent {
   @override
   List<Object?> get props => [capsuleId];
 }
+
+class ArchiveCapsule extends CapsulesEvent {
+  final String capsuleId;
+
+  const ArchiveCapsule({required this.capsuleId});
+
+  @override
+  List<Object?> get props => [capsuleId];
+}

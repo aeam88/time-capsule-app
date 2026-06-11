@@ -114,4 +114,25 @@ class AuthRepository {
       );
     }
   }
+
+  Future<UserModel> updateProfile({
+    String? firstName,
+    String? lastName,
+  }) async {
+    try {
+      final response = await dio.patch(
+        ApiConstants.profile,
+        data: {
+          'firstName':? firstName,
+          'lastName':? lastName,
+        },
+      );
+      return UserModel.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ApiException.fromResponse(
+        e.response?.statusCode ?? 500,
+        e.response?.data,
+      );
+    }
+  }
 }

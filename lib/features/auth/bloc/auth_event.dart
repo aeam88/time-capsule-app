@@ -68,5 +68,11 @@ class ResetPasswordRequested extends AuthEvent {
 }
 
 class UpdateProfileRequested extends AuthEvent {
-  const UpdateProfileRequested();
+  final String? firstName;
+  final String? lastName;
+
+  const UpdateProfileRequested({this.firstName, this.lastName});
+
+  @override
+  List<Object?> get props => [firstName, lastName];
 }

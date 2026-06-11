@@ -151,9 +151,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     UpdateProfileRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(const AuthLoading());
     try {
-      final user = await authRepository.getProfile();
+      final user = await authRepository.updateProfile(
+        firstName: event.firstName,
+        lastName: event.lastName,
+      );
       emit(Authenticated(user: user));
     } on ApiException catch (e) {
       emit(AuthError(message: e.message));

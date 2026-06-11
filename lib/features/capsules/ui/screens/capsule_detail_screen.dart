@@ -439,7 +439,7 @@ class _DetailBody extends StatelessWidget {
       return SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => _showArchiveDialog(context),
           icon: const Icon(Icons.archive_outlined),
           label: const Text('Archivar'),
         ),
@@ -510,6 +510,31 @@ class _DetailBody extends StatelessWidget {
               context.read<CapsulesBloc>().add(UnlockCapsule(capsuleId: capsule.id));
             },
             child: const Text('Desbloquear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showArchiveDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Archivar Cápsula'),
+        content: const Text(
+          '¿Archivar esta cápsula? No aparecerá en tu lista principal.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<CapsulesBloc>().add(ArchiveCapsule(capsuleId: capsule.id));
+            },
+            child: const Text('Archivar'),
           ),
         ],
       ),

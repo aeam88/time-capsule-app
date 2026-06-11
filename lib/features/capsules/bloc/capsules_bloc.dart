@@ -22,6 +22,7 @@ class CapsulesBloc extends Bloc<CapsulesEvent, CapsulesState> {
     on<UpdateCapsule>(_onUpdateCapsule);
     on<LockCapsule>(_onLockCapsule);
     on<UnlockCapsule>(_onUnlockCapsule);
+    on<ArchiveCapsule>(_onArchiveCapsule);
   }
 
   Future<void> _onLoadCapsules(
@@ -195,6 +196,26 @@ class CapsulesBloc extends Bloc<CapsulesEvent, CapsulesState> {
       final capsule = await repository.unlockCapsule(event.capsuleId);
       emit(CapsuleOperationSuccess(
         message: 'Cápsula desbloqueada exitosamente',
+        capsule: capsule,
+      ));
+    } on ApiException catch (e) {
+      emit(CapsulesError(message: e.message));
+    } catch (e) {
+      emit(CapsulesError(message: 'Error inesperado: $e'));
+    }
+  }
+
+  Future<void> _onArchiveCapsule(
+    ArchiveCapsule event,
+    Emitter<CapsulesState> emit,
+  ) async {
+    try {
+      final capsule = await repository.updateCapsule(
+        id: event.capsuleId,
+        status: 'ARCHIVED',
+      );
+      emit(CapsuleOperationSuccess(
+        message: 'Cápsula archivada exitosamente',
         capsule: capsule,
       ));
     } on ApiException catch (e) {

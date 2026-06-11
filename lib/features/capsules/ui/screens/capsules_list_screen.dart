@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/pill_filter_button.dart';
+import '../../../../shared/widgets/shimmer_widget.dart';
 import '../../../auth/bloc/auth_bloc.dart';
 import '../../../auth/bloc/auth_state.dart';
 import '../../bloc/capsules_bloc.dart';
@@ -10,6 +11,7 @@ import '../../bloc/capsules_event.dart';
 import '../../bloc/capsules_state.dart';
 import '../../data/models/capsule_model.dart';
 import '../widgets/create_capsule_bottom_sheet.dart';
+import 'capsule_search_delegate.dart';
 
 class CapsulesListScreen extends StatefulWidget {
   const CapsulesListScreen({super.key});
@@ -47,6 +49,15 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
       appBar: AppBar(
         title: const Text('Mis Cápsulas'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: CapsuleSearchDelegate(),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => context.push('/profile'),
@@ -146,7 +157,11 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
         }
 
         if (_cachedCapsules.isEmpty && !_hasLoaded) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: 5,
+            itemBuilder: (context, index) => const CapsuleCardShimmer(),
+          );
         }
 
         if (_cachedCapsules.isEmpty) {
@@ -163,14 +178,22 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
           );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          itemCount: _cachedCapsules.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 16),
-          itemBuilder: (context, index) {
-            final capsule = _cachedCapsules[index];
-            return _buildCapsuleCard(context, capsule);
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<CapsulesBloc>().add(const LoadCapsules());
+            await context.read<CapsulesBloc>().stream.firstWhere(
+                  (s) => s is CapsulesLoaded || s is CapsulesError,
+                );
           },
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: _cachedCapsules.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final capsule = _cachedCapsules[index];
+              return _buildCapsuleCard(context, capsule);
+            },
+          ),
         );
       },
     );

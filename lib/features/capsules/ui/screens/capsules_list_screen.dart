@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/pill_filter_button.dart';
 import '../../../../shared/widgets/shimmer_widget.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../../auth/bloc/auth_bloc.dart';
 import '../../../auth/bloc/auth_state.dart';
 import '../../bloc/capsules_bloc.dart';
@@ -12,6 +13,7 @@ import '../../bloc/capsules_state.dart';
 import '../../data/models/capsule_model.dart';
 import '../widgets/create_capsule_bottom_sheet.dart';
 import 'capsule_search_delegate.dart';
+import '../../../../app.dart';
 
 class CapsulesListScreen extends StatefulWidget {
   const CapsulesListScreen({super.key});
@@ -20,25 +22,36 @@ class CapsulesListScreen extends StatefulWidget {
   State<CapsulesListScreen> createState() => _CapsulesListScreenState();
 }
 
-class _CapsulesListScreenState extends State<CapsulesListScreen> {
+class _CapsulesListScreenState extends State<CapsulesListScreen> with RouteAware {
   String _currentFilter = 'All';
-  List<Capsule> _cachedCapsules = [];
-  bool _hasLoaded = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final state = context.read<CapsulesBloc>().state;
-        if (state is CapsulesLoaded) {
-          _cachedCapsules = state.capsules;
-          _hasLoaded = true;
-        } else if (!_hasLoaded) {
-          context.read<CapsulesBloc>().add(const LoadCapsules());
-        }
+        context.read<CapsulesBloc>().add(const LoadCapsules());
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    if (mounted) {
+      context.read<CapsulesBloc>().add(const LoadCapsules());
+    }
   }
 
   @override
@@ -49,6 +62,11 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
       appBar: AppBar(
         title: const Text('Mis Cápsulas'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.people_outline),
+            onPressed: () => context.push('/capsules/shared'),
+            tooltip: 'Compartidas',
+          ),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
@@ -136,27 +154,14 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
     return BlocConsumer<CapsulesBloc, CapsulesState>(
       listener: (context, state) {
         if (state is CapsuleOperationSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
+          AppToast.show(context, message: state.message, type: ToastType.success);
         } else if (state is CapsulesError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          AppToast.show(context, message: state.message, type: ToastType.error);
         }
       },
       listenWhen: (prev, curr) => curr is CapsuleOperationSuccess || curr is CapsulesError,
-      buildWhen: (prev, curr) => curr is CapsulesLoaded || curr is CapsulesLoading,
       builder: (context, state) {
-        if (state is CapsulesLoaded) {
-          _cachedCapsules = state.capsules;
-          _hasLoaded = true;
-        }
-
-        if (_cachedCapsules.isEmpty && !_hasLoaded) {
+        if (state is CapsulesLoading) {
           return ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             itemCount: 5,
@@ -164,37 +169,59 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
           );
         }
 
-        if (_cachedCapsules.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: EmptyStateWidget(
-              icon: Icons.access_time_filled_rounded,
-              title: '¡Hola, ${authState.user.firstName ?? 'Usuario'}!',
-              subtitle:
-                  'Crea tu primera cápsula del tiempo para guardar recuerdos',
-              actionLabel: 'Crear Cápsula',
-              onAction: () => showCreateCapsuleBottomSheet(context),
+        if (state is CapsulesError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+                const SizedBox(height: 16),
+                Text(state.message, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => context.read<CapsulesBloc>().add(const LoadCapsules()),
+                  child: const Text('Reintentar'),
+                ),
+              ],
             ),
           );
         }
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            context.read<CapsulesBloc>().add(const LoadCapsules());
-            await context.read<CapsulesBloc>().stream.firstWhere(
-                  (s) => s is CapsulesLoaded || s is CapsulesError,
-                );
-          },
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            itemCount: _cachedCapsules.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final capsule = _cachedCapsules[index];
-              return _buildCapsuleCard(context, capsule);
+        if (state is CapsulesLoaded) {
+          if (state.capsules.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: EmptyStateWidget(
+                icon: Icons.access_time_filled_rounded,
+                title: '¡Hola, ${authState.user.firstName ?? 'Usuario'}!',
+                subtitle:
+                    'Crea tu primera cápsula del tiempo para guardar recuerdos',
+                actionLabel: 'Crear Cápsula',
+                onAction: () => showCreateCapsuleBottomSheet(context),
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<CapsulesBloc>().add(const LoadCapsules());
+              await context.read<CapsulesBloc>().stream.firstWhere(
+                    (s) => s is CapsulesLoaded || s is CapsulesError,
+                  );
             },
-          ),
-        );
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              itemCount: state.capsules.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 16),
+              itemBuilder: (context, index) {
+                final capsule = state.capsules[index];
+                return _buildCapsuleCard(context, capsule);
+              },
+            ),
+          );
+        }
+
+        return const SizedBox.shrink();
       },
     );
   }
@@ -202,8 +229,21 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
   Widget _buildCapsuleCard(BuildContext context, Capsule capsule) {
     final statusColor = _getStatusColor(capsule.statusString);
 
-    return GestureDetector(
-      onTap: () => context.push('/capsules/${capsule.id}'),
+    return Dismissible(
+      key: Key(capsule.id),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) => _showDeleteDialog(context, capsule),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.delete_outline, color: Colors.white),
+      ),
+      child: GestureDetector(
+        onTap: () => context.push('/capsules/${capsule.id}'),
       onLongPress: () => _showCapsuleOptions(context, capsule),
       child: Card(
         elevation: 0,
@@ -307,6 +347,7 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -426,22 +467,20 @@ class _CapsulesListScreenState extends State<CapsulesListScreen> {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, Capsule capsule) {
-    showDialog(
+  Future<bool?> _showDeleteDialog(BuildContext context, Capsule capsule) {
+    return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar Cápsula'),
-        content: const Text(
-          '¿Estás seguro? Esta acción no se puede deshacer.',
-        ),
+        content: Text('¿Eliminar "${capsule.title}"?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(context, true);
               context.read<CapsulesBloc>().add(DeleteCapsule(capsuleId: capsule.id));
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),

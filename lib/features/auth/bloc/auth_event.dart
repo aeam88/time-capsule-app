@@ -76,3 +76,7 @@ class UpdateProfileRequested extends AuthEvent {
   @override
   List<Object?> get props => [firstName, lastName];
 }
+
+class DeleteAccountRequested extends AuthEvent {
+  const DeleteAccountRequested();
+}

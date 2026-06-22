@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'core/config/theme.dart';
+import 'core/config/theme_cubit.dart';
+import 'core/navigation/app_transitions.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/bloc/auth_state.dart';
@@ -16,12 +19,16 @@ import 'features/capsules/data/repositories/capsules_repository.dart';
 import 'features/capsules/ui/screens/capsules_list_screen.dart';
 import 'features/capsules/ui/screens/capsule_detail_screen.dart';
 import 'features/capsules/ui/screens/create_edit_capsule_screen.dart';
+import 'features/capsules/ui/screens/shared_capsules_screen.dart';
+import 'features/files/ui/screens/file_preview_screen.dart';
+import 'features/onboarding/ui/screens/onboarding_screen.dart';
 import 'injection_container.dart';
 import 'package:go_router/go_router.dart';
 
 import 'dart:async';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+final RouteObserver<Route> routeObserver = RouteObserver<Route>();
 
 class TimeCapsuleApp extends StatefulWidget {
   const TimeCapsuleApp({super.key});
@@ -52,61 +59,110 @@ class _TimeCapsuleAppState extends State<TimeCapsuleApp> {
 
     _router = GoRouter(
       navigatorKey: _rootNavigatorKey,
+      observers: [routeObserver],
       initialLocation: '/login',
       routes: [
         GoRoute(
+          path: '/onboarding',
+          pageBuilder: (context, state) => AppTransitions.fadeTransition(
+            context, state, const OnboardingScreen(),
+          ),
+        ),
+        GoRoute(
           path: '/login',
-          builder: (context, state) => const LoginScreen(),
+          pageBuilder: (context, state) => AppTransitions.fadeTransition(
+            context, state, const LoginScreen(),
+          ),
         ),
         GoRoute(
           path: '/register',
-          builder: (context, state) => const RegisterScreen(),
+          pageBuilder: (context, state) => AppTransitions.slideTransition(
+            context, state, const RegisterScreen(),
+          ),
         ),
         GoRoute(
           path: '/forgot-password',
-          builder: (context, state) => const ForgotPasswordScreen(),
+          pageBuilder: (context, state) => AppTransitions.slideTransition(
+            context, state, const ForgotPasswordScreen(),
+          ),
         ),
         GoRoute(
           path: '/profile',
-          builder: (context, state) => const ProfileScreen(),
+          pageBuilder: (context, state) => AppTransitions.slideFromBottom(
+            context, state, const ProfileScreen(),
+          ),
         ),
         GoRoute(
           path: '/capsules',
-          builder: (context, state) => const CapsulesListScreen(),
+          pageBuilder: (context, state) => AppTransitions.fadeTransition(
+            context, state, const CapsulesListScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/capsules/shared',
+          pageBuilder: (context, state) => AppTransitions.slideTransition(
+            context, state, const SharedCapsulesScreen(),
+          ),
         ),
         GoRoute(
           path: '/capsules/create',
-          builder: (context, state) => const CreateEditCapsuleScreen(),
+          pageBuilder: (context, state) => AppTransitions.slideFromBottom(
+            context, state, const CreateEditCapsuleScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/capsules/preview',
+          pageBuilder: (context, state) {
+            final file = state.extra as dynamic;
+            return AppTransitions.slideTransition(
+              context, state, FilePreviewScreen(file: file),
+            );
+          },
         ),
         GoRoute(
           path: '/capsules/:id',
-          builder: (context, state) {
+          pageBuilder: (context, state) {
             final capsuleId = state.pathParameters['id']!;
-            return CapsuleDetailScreen(capsuleId: capsuleId);
+            return AppTransitions.slideTransition(
+              context, state, CapsuleDetailScreen(capsuleId: capsuleId),
+            );
           },
         ),
         GoRoute(
           path: '/capsules/:id/edit',
-          builder: (context, state) {
+          pageBuilder: (context, state) {
             final capsuleId = state.pathParameters['id']!;
-            return _EditCapsuleWrapper(capsuleId: capsuleId);
+            return AppTransitions.slideFromBottom(
+              context, state, _EditCapsuleWrapper(capsuleId: capsuleId),
+            );
           },
         ),
       ],
-      redirect: (context, state) {
+      redirect: (context, state) async {
         final authState = _authBloc.state;
         final isAuthenticated = authState is Authenticated;
         final isLoading = authState is AuthLoading || authState is AuthInitial;
+        final isOnboardingRoute = state.matchedLocation == '/onboarding';
         final isAuthRoute = state.matchedLocation == '/login' ||
             state.matchedLocation == '/register' ||
             state.matchedLocation == '/forgot-password';
 
         if (isLoading) return null;
 
-        if (!isAuthenticated && !isAuthRoute) {
+        // Always check onboarding status from storage
+        const storage = FlutterSecureStorage();
+        final completed = await storage.read(key: 'onboarding_completed');
+        final showOnboarding = completed != 'true';
+
+        // Show onboarding if not completed
+        if (showOnboarding && !isOnboardingRoute && !isAuthenticated) {
+          return '/onboarding';
+        }
+
+        if (!isAuthenticated && !isAuthRoute && !isOnboardingRoute) {
           return '/login';
         }
-        if (isAuthenticated && isAuthRoute) {
+        if (isAuthenticated && (isAuthRoute || isOnboardingRoute)) {
           return '/capsules';
         }
         return null;
@@ -124,15 +180,28 @@ class _TimeCapsuleAppState extends State<TimeCapsuleApp> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _authBloc,
+    return BlocProvider(
+      create: (_) => ThemeCubit(),
       child: BlocProvider.value(
-        value: _capsulesBloc,
-        child: MaterialApp.router(
-          title: 'Time Capsule',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          routerConfig: _router,
+        value: _authBloc,
+        child: BlocProvider.value(
+          value: _capsulesBloc,
+          child: Builder(
+            builder: (context) {
+              return BlocBuilder<ThemeCubit, ThemeMode>(
+                builder: (context, themeMode) {
+                  return MaterialApp.router(
+                    title: 'Time Capsule',
+                    debugShowCheckedModeBanner: false,
+                    theme: AppTheme.lightTheme,
+                    darkTheme: AppTheme.darkTheme,
+                    themeMode: themeMode,
+                    routerConfig: _router,
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );

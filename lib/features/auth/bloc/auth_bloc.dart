@@ -19,6 +19,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ForgotPasswordRequested>(_onForgotPasswordRequested);
     on<ResetPasswordRequested>(_onResetPasswordRequested);
     on<UpdateProfileRequested>(_onUpdateProfile);
+    on<DeleteAccountRequested>(_onDeleteAccount);
   }
 
   Future<void> _onCheckAuthStatus(
@@ -157,6 +158,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         lastName: event.lastName,
       );
       emit(Authenticated(user: user));
+    } on ApiException catch (e) {
+      emit(AuthError(message: e.message));
+    } catch (e) {
+      emit(AuthError(message: 'Error inesperado: $e'));
+    }
+  }
+
+  Future<void> _onDeleteAccount(
+    DeleteAccountRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      await authRepository.deleteAccount();
+      await _storage.deleteAll();
+      emit(const Unauthenticated());
     } on ApiException catch (e) {
       emit(AuthError(message: e.message));
     } catch (e) {

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConstants {
   ApiConstants._();
@@ -6,10 +7,13 @@ class ApiConstants {
   static final String baseUrl = _getBaseUrl();
 
   static String _getBaseUrl() {
+    final envUrl = dotenv.env['API_BASE_URL'];
+    if (envUrl != null && envUrl.isNotEmpty) return envUrl;
+
     if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000/api/v1';
+      return dotenv.env['API_BASE_URL_DEV_ANDROID'] ?? 'http://10.0.2.2:3000/api/v1';
     }
-    return 'http://localhost:3000/api/v1';
+    return dotenv.env['API_BASE_URL_DEV_IOS'] ?? 'http://localhost:3000/api/v1';
   }
 
   // Auth

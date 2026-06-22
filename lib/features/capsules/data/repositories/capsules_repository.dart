@@ -71,6 +71,21 @@ class CapsulesRepository {
     }
   }
 
+  Future<List<Capsule>> getSharedCapsules() async {
+    try {
+      final response = await dio.get(ApiConstants.sharedCapsules);
+      final data = response.data;
+      final list = data is List ? data : data['data'] as List? ?? [];
+      return list.map((json) => Capsule.fromJson(json)).toList();
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw ApiException(
+        message: e.message ?? 'Error al obtener cápsulas compartidas',
+      );
+    }
+  }
+
   Future<Capsule> createCapsule({
     required String title,
     String? description,

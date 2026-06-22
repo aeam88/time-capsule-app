@@ -111,3 +111,7 @@ class ArchiveCapsule extends CapsulesEvent {
   @override
   List<Object?> get props => [capsuleId];
 }
+
+class LoadSharedCapsules extends CapsulesEvent {
+  const LoadSharedCapsules();
+}

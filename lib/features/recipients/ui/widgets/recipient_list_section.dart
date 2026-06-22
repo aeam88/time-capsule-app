@@ -75,17 +75,17 @@ class RecipientListSection extends StatelessWidget {
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(Icons.people_outline, size: 40, color: Colors.grey.shade400),
+                        Icon(Icons.people_outline, size: 40, color: Theme.of(context).textTheme.bodySmall?.color),
                         const SizedBox(height: 8),
                         Text(
                           'Sin destinatarios',
-                          style: TextStyle(color: Colors.grey.shade600),
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         if (canManage) ...[
                           const SizedBox(height: 4),
                           Text(
                             'Agrega personas para que reciban la cápsula',
-                            style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12),
                           ),
                         ],
                       ],

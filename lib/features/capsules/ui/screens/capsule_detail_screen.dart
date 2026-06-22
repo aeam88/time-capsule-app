@@ -14,6 +14,8 @@ import '../../../recipients/bloc/recipients_bloc.dart';
 import '../../../recipients/bloc/recipients_event.dart';
 import '../../../recipients/data/repositories/recipients_repository.dart';
 import '../../../recipients/ui/widgets/recipient_list_section.dart';
+import '../../../../shared/widgets/countdown_timer.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../../../injection_container.dart';
 
 class CapsuleDetailScreen extends StatefulWidget {
@@ -37,18 +39,11 @@ class _CapsuleDetailScreenState extends State<CapsuleDetailScreen> {
     return BlocConsumer<CapsulesBloc, CapsulesState>(
       listener: (context, state) {
         if (state is CapsuleOperationSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
+          AppToast.show(context, message: state.message, type: ToastType.success);
           context.read<CapsulesBloc>().add(const LoadCapsules());
           context.go('/capsules');
         } else if (state is CapsulesError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+          AppToast.show(context, message: state.message, type: ToastType.error);
         }
       },
       builder: (context, state) {
@@ -225,7 +220,7 @@ class _DetailBody extends StatelessWidget {
               Text(
                 capsule.description!,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey.shade700,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
               ),
               const SizedBox(height: 24),
@@ -234,7 +229,7 @@ class _DetailBody extends StatelessWidget {
               Text(
                 'Sin descripción',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey.shade400,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
                       fontStyle: FontStyle.italic,
                     ),
               ),
@@ -243,6 +238,10 @@ class _DetailBody extends StatelessWidget {
             _buildInfoSection(context),
             const SizedBox(height: 24),
             _buildStatsSection(context),
+            if (capsule.status == CapsuleStatus.locked) ...[
+              const SizedBox(height: 24),
+              CountdownTimer(targetDate: capsule.unlockDate),
+            ],
             const SizedBox(height: 24),
             RecipientListSection(
               capsuleId: capsuleId,
@@ -318,7 +317,7 @@ class _DetailBody extends StatelessWidget {
   }) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Theme.of(context).primaryColor),
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.secondary),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -326,9 +325,7 @@ class _DetailBody extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 2),
               Text(
@@ -379,7 +376,7 @@ class _DetailBody extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: Theme.of(context).primaryColor),
+            Icon(icon, size: 32, color: Theme.of(context).colorScheme.secondary),
             const SizedBox(height: 8),
             Text(
               '$count',
@@ -390,9 +387,7 @@ class _DetailBody extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),

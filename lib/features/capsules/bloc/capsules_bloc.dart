@@ -1,11 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../data/repositories/capsules_repository.dart';
 import 'capsules_event.dart';
 import 'capsules_state.dart';
 
 class CapsulesBloc extends Bloc<CapsulesEvent, CapsulesState> {
   final CapsulesRepository repository;
+  final NotificationService _notificationService = NotificationService();
   String? _currentFilter;
   String? _searchQuery;
   String? _nextCursor;
@@ -23,6 +25,7 @@ class CapsulesBloc extends Bloc<CapsulesEvent, CapsulesState> {
     on<LockCapsule>(_onLockCapsule);
     on<UnlockCapsule>(_onUnlockCapsule);
     on<ArchiveCapsule>(_onArchiveCapsule);
+    on<LoadSharedCapsules>(_onLoadSharedCapsules);
   }
 
   Future<void> _onLoadCapsules(
@@ -121,6 +124,12 @@ class CapsulesBloc extends Bloc<CapsulesEvent, CapsulesState> {
         unlockDate: event.unlockDate,
         isEncrypted: event.isEncrypted,
       );
+      // Schedule unlock reminder notification
+      await _notificationService.scheduleUnlockReminder(
+        id: capsule.id.hashCode,
+        capsuleTitle: capsule.title,
+        unlockDate: capsule.unlockDate,
+      );
       emit(CapsuleOperationSuccess(
         message: 'Cápsula creada exitosamente',
         capsule: capsule,
@@ -217,6 +226,24 @@ class CapsulesBloc extends Bloc<CapsulesEvent, CapsulesState> {
       emit(CapsuleOperationSuccess(
         message: 'Cápsula archivada exitosamente',
         capsule: capsule,
+      ));
+    } on ApiException catch (e) {
+      emit(CapsulesError(message: e.message));
+    } catch (e) {
+      emit(CapsulesError(message: 'Error inesperado: $e'));
+    }
+  }
+
+  Future<void> _onLoadSharedCapsules(
+    LoadSharedCapsules event,
+    Emitter<CapsulesState> emit,
+  ) async {
+    emit(const CapsulesLoading());
+    try {
+      final capsules = await repository.getSharedCapsules();
+      emit(CapsulesLoaded(
+        capsules: capsules,
+        hasMore: false,
       ));
     } on ApiException catch (e) {
       emit(CapsulesError(message: e.message));

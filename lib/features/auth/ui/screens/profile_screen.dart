@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/config/theme_cubit.dart';
 import '../../bloc/auth_bloc.dart';
 import '../../bloc/auth_event.dart';
 import '../../bloc/auth_state.dart';
@@ -162,7 +163,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         value: user.email,
                       ),
                     ],
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
+                    Card(
+                      child: BlocBuilder<ThemeCubit, ThemeMode>(
+                        builder: (context, themeMode) {
+                          return SwitchListTile(
+                            secondary: Icon(
+                              themeMode == ThemeMode.dark
+                                  ? Icons.dark_mode
+                                  : Icons.light_mode,
+                            ),
+                            title: const Text('Modo Oscuro'),
+                            subtitle: Text(
+                              themeMode == ThemeMode.dark ? 'Activado' : 'Desactivado',
+                            ),
+                            value: themeMode == ThemeMode.dark,
+                            onChanged: (value) {
+                              context.read<ThemeCubit>().toggleTheme();
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -174,6 +197,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.red),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton.icon(
+                        onPressed: () => _showDeleteAccountDialog(context),
+                        icon: Icon(Icons.delete_forever, color: Colors.red.shade700),
+                        label: Text(
+                          'Eliminar Cuenta',
+                          style: TextStyle(color: Colors.red.shade700),
                         ),
                       ),
                     ),
@@ -281,6 +316,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Cerrar Sesión'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    final TextEditingController confirmController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar Cuenta'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Esta acción eliminará permanentemente tu cuenta y todos tus datos.',
+              style: TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            const Text('Escribe "ELIMINAR" para confirmar:'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: confirmController,
+              decoration: const InputDecoration(
+                hintText: 'ELIMINAR',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              confirmController.dispose();
+            },
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (confirmController.text == 'ELIMINAR') {
+                Navigator.pop(dialogContext);
+                context.read<AuthBloc>().add(const DeleteAccountRequested());
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Eliminar'),
           ),
         ],
       ),

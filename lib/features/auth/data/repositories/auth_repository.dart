@@ -135,4 +135,15 @@ class AuthRepository {
       );
     }
   }
+
+  Future<void> deleteAccount() async {
+    try {
+      await dio.delete('/auth/account');
+    } on DioException catch (e) {
+      throw ApiException.fromResponse(
+        e.response?.statusCode ?? 500,
+        e.response?.data,
+      );
+    }
+  }
 }
